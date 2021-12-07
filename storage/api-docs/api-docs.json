@@ -120,7 +120,6 @@
         },
         "/api/auth/user-profile": {
             "get": {
-                "operationId": "4188c99fa2637f92b254e6526b44fc50",
                 "responses": {
                     "200": {
                         "description": "Display a listing of projects."
