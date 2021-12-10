@@ -1,14 +1,12 @@
 <?php
 
 namespace App\Http\Controllers;
-
 use Illuminate\Http\Request;
 
 use Illuminate\Support\Facades\Auth;
 use App\Models\User;
 use Validator;
 use Symfony\Component\HttpFoundation\Response;
-
 
 class AuthController extends Controller
 {
@@ -17,8 +15,7 @@ class AuthController extends Controller
      *
      * @return void
      */
-    public function __construct()
-    {
+    public function __construct() {
         $this->middleware('auth:api', ['except' => ['login', 'register']]);
     }
 
@@ -88,12 +85,14 @@ class AuthController extends Controller
         ]);
 
         if ($validator->fails()) {
-            return response()->json($validator->errors(), Response::HTTP_UNPROCESSABLE_ENTITY);
+            return response()->json($validator->errors())->setStatusCode(Response::HTTP_UNPROCESSABLE_ENTIT,
+                Response::$statusTexts[Response::HTTP_UNPROCESSABLE_ENTITY]);
         }
 
 
         if (!$token = auth()->attempt($validator->validated())) {
-            return response()->json(['error' => 'Unauthorized'], Response::HTTP_UNAUTHORIZED);
+            return response()->json(['error' => 'Unauthorized'])->setStatusCode(Response::HTTP_FORBIDDEN,
+                Response::$statusTexts[Response::HTTP_FORBIDDEN]);;
         }
 
         return $this->createNewToken($token);
@@ -160,6 +159,10 @@ class AuthController extends Controller
      *      @OA\Response(
      *          response=403,
      *          description="Forbidden"
+     *      ),
+     *     @OA\Response(
+     *          response=422,
+     *          description="Validation error"
      *      )
      *)
      **/
@@ -187,13 +190,18 @@ class AuthController extends Controller
             ['password' => bcrypt($request->password)]
         ));
 
-        return response()->json([
-            'message' => 'User successfully registered',
-            'user' => $user
-        ], Response::HTTP_CREATED);
+        return response()->json(['user' => $user])->setStatusCode(Response::HTTP_CREATED,
+            Response::$statusTexts[Response::HTTP_CREATED]);
     }
 
-
+    /**
+     * @OA\Post(
+     *     path="/api/auth/logout",
+     *     tags={"Auth"},
+     *     security={{"apiAuth":{}}},
+     *     @OA\Response(response="200", description="Display a listing of projects.")
+     * )
+     */
     /**
      * Log the user out (Invalidate the token).
      *
@@ -203,9 +211,18 @@ class AuthController extends Controller
     {
         auth()->logout();
 
-        return response()->json(['message' => 'User successfully signed out']);
+        return response()->json(['message' => 'User successfully signed out'])->setStatusCode(Response::HTTP_OK,
+            Response::$statusTexts[Response::HTTP_OK]);
     }
 
+    /**
+     * @OA\Post(
+     *     path="/api/auth/refresh",
+     *     tags={"Auth"},
+     *     security={{"apiAuth":{}}},
+     *     @OA\Response(response="200", description="Display a listing of projects.")
+     * )
+     */
     /**
      * Refresh a token.
      *
@@ -213,32 +230,29 @@ class AuthController extends Controller
      */
     public function refresh()
     {
-        return $this->createNewToken(auth()->refresh(), Response::HTTP_OK);
+        return $this->createNewToken(auth()->refresh())->setStatusCode(Response::HTTP_OK,
+            Response::$statusTexts[Response::HTTP_OK]);
     }
 
 
     /**
-     * @OAS\SecurityScheme(
-     * securityScheme="bearerAuth",
-     * type="http",
-     * scheme="bearer"
-     * )
-     **/
+     * Get the authenticated User.
+     *
+     * @return \Illuminate\Http\JsonResponse
+     */
     /**
      * @OA\Get(
      *     path="/api/auth/user-profile",
-     *     security={{"bearerAuth":{}}}
+     *     tags={"Auth"},
+     *     summary="Profile user",
+     *     security={{"apiAuth":{}}},
      *     @OA\Response(response="200", description="Display a listing of projects.")
      * )
      */
-    /**
-     * Get the authenticated User.
-     *
-     * @return \Illuminate\Http\Response
-     */
     public function userProfile()
     {
-        return response()->json(auth()->user(), Response::HTTP_OK);
+        return response()->json(auth()->user())->setStatusCode(Response::HTTP_OK,
+            Response::$statusTexts[Response::HTTP_OK]);
     }
 
     /**
@@ -255,7 +269,7 @@ class AuthController extends Controller
             'token_type' => 'bearer',
             'expires_in' => auth()->factory()->getTTL() * 60,
             'user' => auth()->user()
-        ], Response::HTTP_OK);
+        ])->setStatusCode(Response::HTTP_OK,Response::$statusTexts[Response::HTTP_OK]);
     }
 
 }
