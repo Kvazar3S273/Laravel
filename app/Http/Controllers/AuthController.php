@@ -1,6 +1,7 @@
 <?php
 
 namespace App\Http\Controllers;
+
 use Illuminate\Http\Request;
 
 use Illuminate\Support\Facades\Auth;
@@ -15,7 +16,8 @@ class AuthController extends Controller
      *
      * @return void
      */
-    public function __construct() {
+    public function __construct()
+    {
         $this->middleware('auth:api', ['except' => ['login', 'register']]);
     }
 
@@ -176,21 +178,28 @@ class AuthController extends Controller
     public function register(Request $request)
     {
         $validator = Validator::make($request->all(), [
-            'name' => 'required|string|between:2,100',
+            'name' => 'required|between:2,100',
             'email' => 'required|string|email|max:100|unique:users',
-            'password' => 'required|string|confirmed|min:6',
+            'password' => 'required|string|min:6',
         ]);
 
         if ($validator->fails()) {
-            return response()->json($validator->errors()->toJson(), Response::HTTP_BAD_REQUEST);
+            return response()->json($validator->errors())->setStatusCode(Response::HTTP_UNPROCESSABLE_ENTITY,
+                Response::$statusTexts[Response::HTTP_UNPROCESSABLE_ENTITY]);
         }
+        $filename = uniqid() . '.' . $request->file('Image')->extension();
+        $path = public_path(('uploads'));
+        $request->file('Image')->move($path, $filename);
 
         $user = User::create(array_merge(
             $validator->validated(),
-            ['password' => bcrypt($request->password)]
+            ['password' => bcrypt($request->password), 'Image' => $filename]
         ));
-
-        return response()->json(['user' => $user])->setStatusCode(Response::HTTP_CREATED,
+        if (!$token = auth()->attempt($validator->validated())) {
+            return response()->json(['error' => 'Wrong data'], 401);
+        }
+        return response()->json(['user' => $user,
+            'access_token' => $token])->setStatusCode(Response::HTTP_CREATED,
             Response::$statusTexts[Response::HTTP_CREATED]);
     }
 
@@ -269,7 +278,7 @@ class AuthController extends Controller
             'token_type' => 'bearer',
             'expires_in' => auth()->factory()->getTTL() * 60,
             'user' => auth()->user()
-        ])->setStatusCode(Response::HTTP_OK,Response::$statusTexts[Response::HTTP_OK]);
+        ])->setStatusCode(Response::HTTP_OK, Response::$statusTexts[Response::HTTP_OK]);
     }
 
 }
