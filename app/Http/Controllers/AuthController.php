@@ -198,6 +198,7 @@ class AuthController extends Controller
         if (!$token = auth()->attempt($validator->validated())) {
             return response()->json(['error' => 'Wrong data'], 401);
         }
+
         return response()->json(['user' => $user,
             'access_token' => $token])->setStatusCode(Response::HTTP_CREATED,
             Response::$statusTexts[Response::HTTP_CREATED]);
